@@ -13,6 +13,7 @@
     <style>
         :root {
             --kick-green: #53fc18;
+            --kick-green-glow: rgba(83, 252, 24, 0.4);
             --bg-dark: #050505;
             --text-primary: #ffffff;
             --text-secondary: #a1a1aa;
@@ -153,9 +154,41 @@
         .chat-item strong { color: var(--kick-green); font-weight: 700; }
         .badge-sub { display: inline-block; background: #facc15; color: #000; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; margin-right: 5px; font-weight: 800; vertical-align: middle; }
 
-        /* SAĞ PANEL */
-        .draw-panel { align-items: center; justify-content: flex-start; position: relative; padding-top: 3rem; gap: 1.5rem; }
+        /* --- SAĞ PANEL (DÜZENLEME) --- */
+        .draw-panel { 
+            /* Flexbox ile dikey yerleşim */
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between; /* Üst grup ve alt grup arası boşluk */
+            align-items: center;
+            padding: 1.5rem; 
+            gap: 1rem; 
+        }
         
+        /* 1. Üst Kısım: SAHNE (Durum + Çekiliş + Buton) - ORTALI */
+        .draw-stage-wrapper {
+            flex-grow: 1; /* Mevcut boşluğu kapla */
+            display: flex;
+            flex-direction: column;
+            justify-content: center; /* Dikeyde ortala */
+            align-items: center;     /* Yatayda ortala */
+            width: 100%;
+            gap: 1.5rem; /* Elemanlar arası boşluk */
+        }
+
+        /* Yeni Durum Metni */
+        .status-text {
+            font-size: 1rem; 
+            font-weight: 800; 
+            letter-spacing: 2px;
+            color: var(--kick-green);
+            text-shadow: 0 0 15px rgba(83, 252, 24, 0.3);
+            text-transform: uppercase;
+            min-height: 24px; /* Zıplamayı önler */
+            opacity: 0.8;
+            transition: all 0.3s ease;
+        }
+
         .winner-container { width: 100%; height: 250px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; flex-shrink: 0; }
         .winner-container::before {
             content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
@@ -199,9 +232,13 @@
         .btn-main:active { transform: translateY(1px); }
         .btn-main:disabled { background: rgba(255,255,255,0.05); color: #666 !important; -webkit-text-fill-color: #666 !important; border-color: #333; box-shadow: none; cursor: not-allowed; text-shadow: none; }
 
-        /* KATILIMCI LİSTESİ */
+        /* 2. Alt Kısım: KATILIMCI LİSTESİ (Tabana Yapışık) */
         .participant-list-container { 
-            width: 100%; flex-grow: 1; max-height: 250px; min-height: 0;
+            width: 100%; 
+            flex-grow: 0; /* Artık esnek değil, sabit veya içeriğe göre */
+            height: 180px; /* Sabit yükseklik, alt kısım düzenli dursun */
+            min-height: 150px;
+            
             background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(10px);
             border-radius: 18px; border: 1px solid var(--glass-border); 
             box-shadow: var(--glass-inset); padding: 1.2rem; 
@@ -234,7 +271,7 @@
         ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
 
-        /* --- YENİLENMİŞ CAM (GLASS) BİLDİRİM SİSTEMİ --- */
+        /* BİLDİRİM SİSTEMİ */
         #notification-container {
             position: fixed; top: 30px; left: 50%; transform: translateX(-50%);
             z-index: 2000; display: flex; flex-direction: column; gap: 10px;
@@ -245,7 +282,7 @@
             pointer-events: auto;
             backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
             padding: 14px 28px;
-            border-radius: 18px; /* Butonla aynı yuvarlaklık */
+            border-radius: 18px; 
             font-weight: 700;
             font-size: 0.95rem;
             display: flex; align-items: center; gap: 12px;
@@ -255,7 +292,6 @@
             justify-content: center;
         }
 
-        /* Hata (Kırmızı Cam) */
         .toast.error {
             background: rgba(255, 68, 68, 0.1);
             border: 1px solid rgba(255, 68, 68, 0.3);
@@ -263,7 +299,6 @@
             text-shadow: 0 0 15px rgba(255, 68, 68, 0.4);
         }
         
-        /* Uyarı (Sarı Cam) */
         .toast.warning {
             background: rgba(250, 204, 21, 0.1);
             border: 1px solid rgba(250, 204, 21, 0.3);
@@ -275,7 +310,6 @@
             from { opacity: 0; transform: translateY(-30px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        
         @keyframes fadeOut {
             to { opacity: 0; transform: translateY(-10px); }
         }
@@ -285,7 +319,6 @@
 <body>
 
     <div id="notification-container"></div>
-
     <div class="grain-overlay"></div>
     <div class="bg-glow"></div>
 
@@ -321,12 +354,17 @@
         </div>
 
         <div class="panel draw-panel">
-            <div class="winner-container" id="winnerContainer">
-                <div id="winnerText" class="winner-text" style="font-size: 5rem;">???</div>
-            </div>
             
-            <div class="action-area">
-                <button id="drawBtn" class="btn-main" onclick="startDraw()">ÇEKİLİŞİ BAŞLAT</button>
+            <div class="draw-stage-wrapper">
+                <div id="statusText" class="status-text">ÇEKİLİŞE HAZIR</div>
+
+                <div class="winner-container" id="winnerContainer">
+                    <div id="winnerText" class="winner-text" style="font-size: 5rem;">???</div>
+                </div>
+                
+                <div class="action-area">
+                    <button id="drawBtn" class="btn-main" onclick="startDraw()">ÇEKİLİŞİ BAŞLAT</button>
+                </div>
             </div>
             
             <div class="participant-list-container">
@@ -354,20 +392,17 @@
             winnerContainer: document.getElementById('winnerContainer'),
             drawBtn: document.getElementById('drawBtn'), connectBtn: document.getElementById('connectBtn'),
             keyword: document.getElementById('keyword'), 
-            subChance: document.getElementById('subChance')
+            subChance: document.getElementById('subChance'),
+            statusText: document.getElementById('statusText') // Yeni
         };
 
-        // --- BİLDİRİM SİSTEMİ ---
         function showNotification(message, type = 'error') {
             const container = document.getElementById('notification-container');
             const toast = document.createElement('div');
             toast.className = `toast ${type}`;
-            
             let icon = type === 'error' ? '⚠️' : '⚡';
-            
             toast.innerHTML = `<span>${icon}</span> ${message}`;
             container.appendChild(toast);
-
             setTimeout(() => {
                 toast.style.animation = 'fadeOut 0.3s ease forwards';
                 setTimeout(() => toast.remove(), 300);
@@ -382,7 +417,6 @@
 
         function connectToKick() {
             ui.connectBtn.innerText = "BAĞLANIYOR...";
-            
             if(pusher) { pusher.disconnect(); }
             pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, encrypted: true });
             channel = pusher.subscribe(`chatrooms.${TARGET_CHANNEL_ID}.v2`);
@@ -440,11 +474,7 @@
             const tag = document.createElement('div'); 
             tag.className = `user-tag ${isSub ? 'sub' : ''}`; 
             tag.innerText = name;
-            
-            tag.onclick = function() {
-                removeParticipant(name, tag);
-            };
-            
+            tag.onclick = function() { removeParticipant(name, tag); };
             ui.participantListUi.appendChild(tag); 
             ui.participantListUi.scrollTop = ui.participantListUi.scrollHeight;
         }
@@ -468,7 +498,6 @@
                 showNotification("Lütfen önce sohbet bağlantısını başlatın!", "error");
                 return;
             }
-
             if (participants.size === 0) {
                 showNotification("Listede henüz katılımcı yok!", "warning");
                 return;
@@ -486,6 +515,7 @@
             ui.winnerText.className = "winner-text";
             ui.winnerContainer.classList.remove('has-winner');
             ui.winnerText.style.color = "#fff";
+            ui.statusText.style.opacity = 1;
 
             let counter = 0; 
             let speed = 120; 
@@ -500,16 +530,26 @@
                 adjustFontSize(randomName); ui.winnerText.innerText = randomName;
                 counter++;
                 
+                // --- DURUM METNİ GÜNCELLEME ---
+                if(counter < 15) ui.statusText.innerText = "ADAYLAR KARIŞTIRILIYOR...";
+                else if(counter < 35) ui.statusText.innerText = "HEYECAN DORUKTA...";
+                else if(counter < 48) ui.statusText.innerText = "KAZANAN BELİRLENİYOR...";
+
                 if (counter < maxIterations) {
                     if (counter > maxIterations - 20) speed += 40; 
                     setTimeout(loop, speed);
                 } else {
                     const winner = pool[Math.floor(Math.random() * pool.length)];
                     adjustFontSize(winner); ui.winnerText.innerText = winner;
+                    
                     ui.winnerText.classList.remove('cycle');
                     ui.winnerText.classList.add('winner-found');
                     ui.winnerContainer.classList.add('has-winner');
+                    
                     ui.drawBtn.disabled = false; ui.drawBtn.innerText = "YENİDEN ÇEK"; 
+                    
+                    // Son Durum
+                    ui.statusText.innerText = "🎉 KAZANAN BELLİ OLDU! 🎉";
                     
                     const winnerData = participants.get(winner);
                     const winnerTag = winnerData.isSub ? " (ABONE)" : "";
