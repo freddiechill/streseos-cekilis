@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StresEos Çekiliş</title>
+    <link href="https://api.fontshare.com/v2/css?f[]=satoshi@900,700,500,400&display=swap" rel="stylesheet">
+    <script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+    
+    <style>
+        :root {
+            --kick-green: #53fc18;
+            --kick-green-glow: rgba(83, 252, 24, 0.4);
+            --bg-dark: #050505;
+            --text-primary: #ffffff;
+            --text-secondary: #a1a1aa;
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --glass-bg: rgba(255, 255, 255, 0.03);
+            --glass-inset: inset 0 2px 5px rgba(0, 0, 0, 0.3);
+            --font-main: 'Satoshi', sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font-main) !important; }
+
+        body {
+            background-color: var(--bg-dark);
+            background-image: radial-gradient(circle at 50% -20%, #0f180f 0%, #020202 70%, #000000 100%);
+            color: var(--text-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* --- NOISE EFEKTİ --- */
+        .grain-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; 
+            z-index: 999; 
+            opacity: 0.7; 
+            mix-blend-mode: overlay;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 400 400' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='1.5' numOctaves='4' stitchTiles='stitch'/ >%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        .bg-glow {
+            position: absolute; width: 1000px; height: 1000px; background: var(--kick-green);
+            filter: blur(400px); opacity: 0.08; border-radius: 50%; z-index: -2;
+            top: -500px; left: 50%; transform: translateX(-50%);
+        }
+
+        .container {
+            width: 95%; max-width: 1200px; height: 85vh;
+            display: grid; grid-template-columns: 340px 1fr; gap: 20px;
+            position: relative; z-index: 1;
+        }
+
+        /* --- ANA PANEL --- */
+        .panel {
+            background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+            backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+            border: 1px solid var(--glass-border);
+            border-top-color: rgba(255,255,255,0.15); 
+            border-radius: 24px; 
+            padding: 1.5rem;
+            display: flex; flex-direction: column; 
+            box-shadow: 0 25px 60px rgba(0,0,0,0.6);
+            height: 100%; overflow: hidden;
+        }
+
+        /* --- SOL PANEL DÜZENİ (ORTALAMA) --- */
+        .settings-panel { 
+            gap: 1.2rem; 
+            align-items: center; 
+            text-align: center; 
+        }
+        
+        h1 { font-weight: 900; font-size: 1.8rem; letter-spacing: -0.5px; margin-bottom: 5px; }
+        h1 span { color: var(--kick-green); text-shadow: 0 0 25px rgba(83, 252, 24, 0.3); }
+
+        .btn-connect, .input-group, .chat-section-wrapper {
+             width: 100%;
+        }
+
+        .input-group { display: flex; flex-direction: column; gap: 8px; }
+        
+        label { 
+            font-weight: 700; font-size: 0.75rem; color: var(--text-secondary); 
+            letter-spacing: 0.5px; text-transform: uppercase; 
+            margin: 0 0 5px 0;
+            opacity: 0.8;
+            display: block;
+        }
+        
+        /* INPUT - CAM */
+        input[type="text"] { 
+            background: rgba(0, 0, 0, 0.3); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.4); 
+            color: #fff; padding: 14px; border-radius: 14px; font-size: 0.95rem; 
+            font-weight: 500; outline: none; transition: all 0.3s ease; width: 100%; text-align: center;
+        }
+        input[type="text"]:focus { 
+            border-color: var(--kick-green); 
+            background: rgba(0, 0, 0, 0.5);
+            box-shadow: 0 0 15px rgba(83, 252, 24, 0.1), inset 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        /* TOGGLE SWITCH */
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; margin-top: 5px; padding: 0 10px; }
+        .toggle-label { font-size: 0.9rem; font-weight: 600; color: #d4d4d8; cursor: pointer; transition: 0.2s; }
+        .toggle-label:hover { color: #fff; }
+
+        .switch { position: relative; display: inline-block; width: 44px; height: 24px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider {
+            position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0;
+            background-color: rgba(255,255,255,0.05); 
+            backdrop-filter: blur(4px);
+            border: 1px solid var(--glass-border);
+            transition: .4s; border-radius: 34px; 
+        }
+        .slider:before {
+            position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px;
+            background-color: white; transition: .4s; border-radius: 50%; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        input:checked + .slider { background-color: var(--kick-green); border-color: var(--kick-green); }
+        input:checked + .slider:before { transform: translateX(20px); background-color: #000; }
+
+        /* BAĞLAN BUTONU */
+        .btn-connect { 
+            background: rgba(255, 255, 255, 0.02); 
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff; padding: 15px; border-radius: 14px; font-weight: 700; cursor: pointer; 
+            font-size: 0.9rem; transition: 0.3s; display: flex; 
+            justify-content: center; align-items: center; gap: 10px; 
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        }
+        .btn-connect:hover { 
+            background: rgba(255, 255, 255, 0.08); 
+            border-color: rgba(255,255,255,0.3); 
+            transform: translateY(-2px);
+        }
+        .btn-connect.connected { 
+            background: rgba(83, 252, 24, 0.05); color: var(--kick-green); 
+            border-color: rgba(83, 252, 24, 0.3); cursor: default; transform: none;
+            box-shadow: none;
+        }
+
+        /* CHAT KUTUSU */
+        .chat-section-wrapper {
+            display: flex; flex-direction: column; 
+            gap: 6px; 
+            flex: 1; min-height: 0;
+        }
+
+        .chat-log { 
+            flex: 1; min-height: 0;
+            background: rgba(0, 0, 0, 0.3); 
+            backdrop-filter: blur(10px);
+            border-radius: 16px; 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.4); 
+            padding: 12px; 
+            overflow-y: auto; font-size: 0.85rem; text-align: left; 
+            display: flex; flex-direction: column-reverse; gap: 8px; 
+        }
+        .chat-item { color: var(--text-secondary); border-bottom: 1px solid rgba(255,255,255,0.04); padding-bottom: 6px; }
+        .chat-item strong { color: var(--kick-green); font-weight: 700; }
+        .badge-sub { display: inline-block; background: #facc15; color: #000; font-size: 0.6rem; padding: 1px 4px; border-radius: 3px; margin-right: 5px; font-weight: 800; vertical-align: middle; }
+
+        /* SAĞ PANEL */
+        .draw-panel { 
+            align-items: center; justify-content: flex-start; position: relative; padding-top: 3rem; gap: 1.5rem; 
+        }
+        
+        .winner-container { width: 100%; height: 250px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; flex-shrink: 0; }
+        
+        .winner-container::before {
+            content: ''; position: absolute; top: 50%; left: 50%; width: 0; height: 0;
+            background: radial-gradient(circle, rgba(83, 252, 24, 0.2) 0%, transparent 70%);
+            transform: translate(-50%, -50%); transition: all 0.8s cubic-bezier(0.19, 1, 0.22, 1);
+            z-index: -1; border-radius: 50%; filter: blur(30px);
+        }
+        .winner-container.has-winner::before { width: 500px; height: 500px; opacity: 1; }
+
+        .winner-text {
+            font-weight: 900; color: #fff; text-align: center; line-height: 1; width: 100%; padding: 0 20px; word-wrap: break-word; z-index: 2; transition: color 0.3s ease;
+        }
+        .winner-text.cycle { animation: cinemaIn 0.15s ease-out forwards; }
+        @keyframes cinemaIn { 0% { opacity: 0; transform: scale(0.95) translateY(10px); filter: blur(10px); } 100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); } }
+
+        .winner-text.winner-found {
+            color: var(--kick-green);
+            text-shadow: 0 0 30px rgba(83, 252, 24, 0.5);
+            animation: winnerPop 1.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+        @keyframes winnerPop { 0% { opacity: 0; transform: scale(0.9); filter: blur(15px); } 100% { opacity: 1; transform: scale(1); filter: blur(0); } }
+
+        .action-area { width: 100%; max-width: 350px; z-index: 2; flex-shrink: 0; }
+        
+        /* --- GÜNCELLENEN BUTON: ÇOK DAHA SAYDAM YEŞİL ZEMİN (0.08) --- */
+        .btn-main { 
+            /* Yeşil zemin neredeyse görünmez, sadece bir ton (0.08) */
+            background: rgba(83, 252, 24, 0.08); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            
+            /* YEŞİL YAZI */
+            color: var(--kick-green) !important; 
+            -webkit-text-fill-color: var(--kick-green) !important;
+            text-shadow: 0 0 10px rgba(83, 252, 24, 0.3);
+            
+            border: 1px solid rgba(83, 252, 24, 0.3);
+            
+            padding: 1.4rem; border-radius: 18px; font-size: 1.3rem; font-weight: 900; 
+            cursor: pointer; text-transform: uppercase; 
+            
+            box-shadow: 
+                0 10px 30px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255,255,255,0.1);
+            
+            transition: all 0.2s ease; width: 100%; letter-spacing: 0.5px; 
+            position: relative; overflow: hidden;
+        }
+
+        .btn-main:hover { 
+            transform: translateY(-2px); 
+            background: rgba(83, 252, 24, 0.15); /* Hoverda biraz daha belirgin (0.15) */
+            box-shadow: 
+                0 15px 40px rgba(83, 252, 24, 0.15),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+            text-shadow: 0 0 15px rgba(83, 252, 24, 0.5);
+        }
+        
+        .btn-main:active {
+            transform: translateY(1px);
+        }
+        
+        .btn-main:disabled { 
+            background: rgba(255,255,255,0.05); 
+            color: #666 !important; -webkit-text-fill-color: #666 !important; 
+            border-color: #333; box-shadow: none; cursor: not-allowed; text-shadow: none;
+        }
+
+        /* KATILIMCI LİSTESİ */
+        .participant-list-container { 
+            width: 100%; flex-grow: 1; max-height: 250px; min-height: 0;
+            background: rgba(0, 0, 0, 0.2); 
+            backdrop-filter: blur(10px);
+            border-radius: 18px; 
+            border: 1px solid var(--glass-border); 
+            box-shadow: var(--glass-inset);
+            padding: 1.2rem; 
+            display: flex; flex-direction: column; overflow: hidden; 
+        }
+        .list-header { font-size: 0.8rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 1rem; display: flex; justify-content: space-between; flex-shrink: 0; letter-spacing: 0.5px; }
+        .list-scroll { overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px; align-content: flex-start; flex: 1; padding-right: 5px; }
+        
+        /* TAGLAR */
+        .user-tag { 
+            background-color: rgba(15, 15, 18, 0.85); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            padding: 10px 16px; border-radius: 10px; font-size: 1rem; font-weight: 600; 
+            color: #e4e4e7; transition: 0.2s; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex; align-items: center;
+        }
+        .user-tag:hover { background-color: rgba(30, 30, 35, 0.9); border-color: rgba(255, 255, 255, 0.15); transform: translateY(-1px); }
+        .user-tag.sub { 
+            border-color: rgba(83, 252, 24, 0.4); 
+            background: linear-gradient(145deg, rgba(83, 252, 24, 0.1), rgba(83, 252, 24, 0.05));
+            color: #fff; box-shadow: 0 0 15px rgba(83, 252, 24, 0.1); 
+        }
+        
+        ::-webkit-scrollbar { width: 6px; } 
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+
+    </style>
+</head>
+<body>
+
+    <div class="grain-overlay"></div>
+    <div class="bg-glow"></div>
+
+    <div class="container">
+        <div class="panel settings-panel">
+            <h1>StresEos <span>Çekiliş</span></h1>
+            
+            <button id="connectBtn" class="btn-connect" onclick="connectToKick()">
+                📡 SOHBETE BAĞLAN
+            </button>
+            
+            <div class="input-group">
+                <label>Çekiliş Komutu</label>
+                <input type="text" id="keyword" value="!cekilis">
+                
+                <div class="toggle-row">
+                    <span class="toggle-label" onclick="document.getElementById('subChance').click()">Abonelere x2 Şans</span>
+                    <label class="switch">
+                        <input type="checkbox" id="subChance">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <div class="chat-section-wrapper">
+                <label class="chat-label">Son Mesajlar</label>
+                <div class="chat-log" id="chatPreview">
+                    <div style="text-align:center; padding:10px; color:rgba(255,255,255,0.3); font-size:0.8rem;">Sohbet bekleniyor...</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel draw-panel">
+            <div class="winner-container" id="winnerContainer">
+                <div id="winnerText" class="winner-text" style="font-size: 5rem;">???</div>
+            </div>
+            
+            <div class="action-area">
+                <button id="drawBtn" class="btn-main" onclick="startDraw()">ÇEKİLİŞİ BAŞLAT</button>
+            </div>
+            
+            <div class="participant-list-container">
+                <div class="list-header">
+                    <span>KATILIMCILAR</span>
+                    <span id="poolCount" style="color:#fff; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:4px;">0</span>
+                </div>
+                <div class="list-scroll" id="participantListUi"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let participants = new Map(); let pusher; let channel;
+        const PUSHER_KEY = "32cbd69e4b950bf97679"; const PUSHER_CLUSTER = "us2";
+        const TARGET_CHANNEL_ID = "42245610"; 
+
+        const ui = {
+            chat: document.getElementById('chatPreview'), poolCount: document.getElementById('poolCount'),
+            participantListUi: document.getElementById('participantListUi'), 
+            winnerText: document.getElementById('winnerText'),
+            winnerContainer: document.getElementById('winnerContainer'),
+            drawBtn: document.getElementById('drawBtn'), connectBtn: document.getElementById('connectBtn'),
+            keyword: document.getElementById('keyword'), subChance: document.getElementById('subChance')
+        };
+
+        function adjustFontSize(text) {
+            const len = text.length; let size = "5rem";
+            if (len > 8) size = "4rem"; if (len > 12) size = "3rem"; if (len > 18) size = "2rem"; if (len > 25) size = "1.5rem";
+            ui.winnerText.style.fontSize = size;
+        }
+
+        function connectToKick() {
+            ui.connectBtn.innerText = "BAĞLANIYOR...";
+            
+            if(pusher) { pusher.disconnect(); }
+            pusher = new Pusher(PUSHER_KEY, { cluster: PUSHER_CLUSTER, encrypted: true });
+            channel = pusher.subscribe(`chatrooms.${TARGET_CHANNEL_ID}.v2`);
+            
+            channel.bind('pusher:subscription_succeeded', () => {
+                ui.connectBtn.classList.add('connected');
+                ui.connectBtn.innerText = "BAĞLANTI AKTİF";
+                ui.chat.innerHTML = ""; addLog("Sistem", "Kick sohbetine başarıyla bağlandı.", false);
+            });
+
+            // ABONE ALGILAMA
+            channel.bind('App\\Events\\ChatMessageEvent', (data) => {
+                const user = data.sender.username; 
+                const msg = data.content; 
+                const cmd = ui.keyword.value;
+
+                let isSub = false;
+                if(data.sender.identity && data.sender.identity.badges) {
+                     data.sender.identity.badges.forEach(badge => {
+                         if(badge.type === 'subscriber' || badge.type === 'founder') {
+                             isSub = true;
+                         }
+                     });
+                }
+
+                addLog(user, msg, isSub);
+
+                if(msg.trim().toLowerCase() === cmd.toLowerCase()) {
+                    if(!participants.has(user)) {
+                        participants.set(user, { name: user, isSub: isSub }); 
+                        addParticipantToUi(user, isSub); 
+                        updateCount();
+                    } else {
+                        if(isSub && !participants.get(user).isSub) {
+                             participants.set(user, { name: user, isSub: true });
+                             refreshParticipantUi(); 
+                        }
+                    }
+                }
+            });
+        }
+
+        function addLog(user, msg, isSub) {
+            const div = document.createElement('div'); div.className = 'chat-item'; 
+            let badgeHtml = isSub ? '<span class="badge-sub">SUB</span>' : '';
+            div.innerHTML = `${badgeHtml}<strong>${user}:</strong> ${msg}`;
+            ui.chat.prepend(div); 
+            if(ui.chat.children.length > 50) ui.chat.lastChild.remove();
+        }
+
+        function addParticipantToUi(name, isSub) {
+            const tag = document.createElement('div'); tag.className = `user-tag ${isSub ? 'sub' : ''}`; tag.innerText = name;
+            ui.participantListUi.appendChild(tag); ui.participantListUi.scrollTop = ui.participantListUi.scrollHeight;
+        }
+
+        function refreshParticipantUi() {
+            ui.participantListUi.innerHTML = '';
+            participants.forEach(p => addParticipantToUi(p.name, p.isSub));
+        }
+
+        function updateCount() { ui.poolCount.innerText = `${participants.size} Kişi`; }
+
+        function startDraw() {
+            if(participants.size === 0) { alert("Katılımcı yok!"); return; }
+            
+            let pool = []; 
+            participants.forEach(p => { 
+                pool.push(p.name); 
+                if(ui.subChance.checked && p.isSub) {
+                    pool.push(p.name); 
+                }
+            });
+            
+            ui.drawBtn.disabled = true;
+            ui.winnerText.className = "winner-text";
+            ui.winnerContainer.classList.remove('has-winner');
+            ui.winnerText.style.color = "#fff";
+
+            let counter = 0; 
+            let speed = 120; 
+            const maxIterations = 50; 
+
+            function loop() {
+                ui.winnerText.classList.remove('cycle');
+                void ui.winnerText.offsetWidth; 
+                ui.winnerText.classList.add('cycle');
+
+                const randomName = pool[Math.floor(Math.random() * pool.length)];
+                adjustFontSize(randomName); ui.winnerText.innerText = randomName;
+                counter++;
+                
+                if (counter < maxIterations) {
+                    if (counter > maxIterations - 20) speed += 40; 
+                    setTimeout(loop, speed);
+                } else {
+                    const winner = pool[Math.floor(Math.random() * pool.length)];
+                    adjustFontSize(winner); ui.winnerText.innerText = winner;
+                    ui.winnerText.classList.remove('cycle');
+                    ui.winnerText.classList.add('winner-found');
+                    ui.winnerContainer.classList.add('has-winner');
+                    ui.drawBtn.disabled = false; ui.drawBtn.innerText = "YENİDEN ÇEK"; 
+                    
+                    const winnerData = participants.get(winner);
+                    const winnerTag = winnerData.isSub ? " (ABONE)" : "";
+                    addLog("🏆 SİSTEM", `KAZANAN: ${winner}${winnerTag}`, false);
+                }
+            }
+            loop();
+        }
+    </script>
+</body>
+</html>
